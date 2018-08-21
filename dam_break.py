@@ -12,20 +12,20 @@ Solve the one-dimensional shallow water equations including bathymetry:
     (hu)_t + (hu^2 + \frac{1}{2}gh^2)_x & = -g h b_x.
 
 Here h is the depth, u is the velocity, g is the gravitational constant, and b
-the bathymetry.  
+the bathymetry.
 """
 
-from __future__ import absolute_import
+#from __future__ import absolute_import
 import numpy
 
 
-def deposition(state): 
+def deposition(state):
     c = numpy.where(state.q[0, :] > state.problem_data['dry_tolerance'],
                     state.q[2, :] / state.q[0, :],
                     numpy.zeros(state.q.shape[1]))
     omega_0 = state.problem_data['omega_0']
     m = 2
-    
+
     # print("alpha: ", alpha(state))
     # import pdb; pdb.set_trace()
 
@@ -40,10 +40,10 @@ def deposition(state):
 #     theta_c = state.problem_data['theta_c']
 #     p = state.problem_data['p']
 
-#     u = numpy.where(state.q[0, :] > state.problem_data['dry_tolerance'], 
+#     u = numpy.where(state.q[0, :] > state.problem_data['dry_tolerance'],
 #                     state.q[1, :] / state.q[0, :],
 #                     numpy.zeros(state.q.shape[1]))
-#     u_star = state.q[0, :] * numpy.sqrt(state.problem_data['grav'] * state.q[0, :]) * numpy.abs(state.problem_data['mannings_n']**2 * u**2 / state.q[0, :]**(4.0 / 3.0)) 
+#     u_star = state.q[0, :] * numpy.sqrt(state.problem_data['grav'] * state.q[0, :]) * numpy.abs(state.problem_data['mannings_n']**2 * u**2 / state.q[0, :]**(4.0 / 3.0))
 #     theta = u_star**2 / (state.problem_data['s'] * state.problem_data['grav'] * state.problem_data['d'])
 #     R = numpy.sqrt(s * g * d) * d / nu
 #     U_inf = 7.0 * u / 6.0
@@ -52,18 +52,18 @@ def deposition(state):
 
 def erosion(state):
     phi = state.problem_data['phi']
-    u = numpy.where(state.q[0, :] > state.problem_data['dry_tolerance'], 
+    u = numpy.where(state.q[0, :] > state.problem_data['dry_tolerance'],
                     state.q[1, :] / state.q[0, :],
                     numpy.zeros(state.q.shape[1]))
-    u_star = state.q[0, :] * numpy.sqrt(state.problem_data['grav'] * state.q[0, :]) * numpy.abs(state.problem_data['mannings_n']**2 * u**2 / state.q[0, :]**(4.0 / 3.0)) 
+    u_star = state.q[0, :] * numpy.sqrt(state.problem_data['grav'] * state.q[0, :]) * numpy.abs(state.problem_data['mannings_n']**2 * u**2 / state.q[0, :]**(4.0 / 3.0))
     theta = u_star**2 / (state.problem_data['s'] * state.problem_data['grav'] * state.problem_data['d'])
-    
+
     # print("u_star: ", u_star)
     # print("theta_c: ", state.problem_data['theta_c'])
     # print("Theta: ", theta)
     # import pdb; pdb.set_trace()
 
-    return numpy.where(theta >= state.problem_data['theta_c'], 
+    return numpy.where(theta >= state.problem_data['theta_c'],
                        phi * (theta - state.problem_data['theta_c']) * u / (state.q[0, :] * state.problem_data['d']**(0.2)),
                        numpy.zeros(state.q.shape[1]))
 
@@ -101,11 +101,11 @@ def source_term(solver, state, dt):
 
     if numpy.any(deposition(state) < 0.0):
         raise ValueError("Deposition < 0.0")
-    
+
     # Friction
     if mannings_n > 0.0:
-        u = numpy.where(state.q[0, :] > dry_tol, 
-                        state.q[1, :] / state.q[0, :], 
+        u = numpy.where(state.q[0, :] > dry_tol,
+                        state.q[1, :] / state.q[0, :],
                         numpy.zeros(state.q[0, :].shape[0]))
         gamma = u * g * mannings_n**2 / state.q[0, :]**(4.0 / 3.0)
         state.q[1, :] /= (1.0 + dt * gamma)
@@ -117,10 +117,10 @@ def source_term(solver, state, dt):
     c = numpy.where(state.q[0, :] > dry_tol,
                     state.q[2, :] / state.q[0, :],
                     numpy.zeros(state.q.shape[1]))
-    u = numpy.where(state.q[0, :] > dry_tol, 
-                    state.q[1, :] / state.q[0, :], 
+    u = numpy.where(state.q[0, :] > dry_tol,
+                    state.q[1, :] / state.q[0, :],
                     numpy.zeros(state.q[0, :].shape[0]))
-    
+
     dx = state.patch.dimensions[0].delta
     dcdx = numpy.zeros(c.shape[0])
     dcdx[0] = (c[1] - c[0]) / dx
@@ -132,7 +132,7 @@ def source_term(solver, state, dt):
     # print("Deposition: ")
     # print(deposition(state))
     # import pdb; pdb.set_trace()
-    
+
     state.q[1, :] += -dt * (rho_0 - rho_mix(state)) * (erosion(state) - deposition(state)) * u / (rho_mix(state) * (1.0 - p))
     state.q[1, :] += -dt * (rho_s - rho_w) * g * state.q[0, :]**2 / (2.0 * rho_mix(state)) * dcdx
 
@@ -168,7 +168,7 @@ def setup(kernel_language='Fortran', solver_type='classic', use_petsc=False,
 
     xlower = 0.0
     xupper = 50e3
-    x = pyclaw.Dimension(xlower, xupper, 10000, name='x')
+    x = pyclaw.Dimension(xlower, xupper, 2000, name='x')
     domain = pyclaw.Domain(x)
     state = pyclaw.State(domain, 3, 1)
 
@@ -191,9 +191,12 @@ def setup(kernel_language='Fortran', solver_type='classic', use_petsc=False,
     state.problem_data['theta_c'] = 0.045
 
     xc = state.grid.x.centers
-    state.aux[0, :] = 0.0
-    state.q[0, :] = 40.0 * numpy.ones(x.centers.shape[0]) * (x.centers <= 25e3) \
-                  + 2.0 * numpy.ones(x.centers.shape[0]) * (x.centers > 25e3)
+    state.aux[0, :] = -1.0
+#    state.aux[0, :] = -5.0* numpy.ones(x.centers.shape[0]) * (x.centers >= 25e3)
+    #state.aux[0, :] = 50.0* numpy.ones(x.centers.shape[0]) * (x.centers >= 35e3)
+
+    state.q[0, :] = 50.0 * numpy.ones(x.centers.shape[0]) * (x.centers <= 25e3) \
+                  + 5.1 * numpy.ones(x.centers.shape[0]) * (x.centers > 25e3)
     state.q[1, :] = 0.0
     state.q[2, :] = 0.0
 
@@ -219,11 +222,11 @@ def setup(kernel_language='Fortran', solver_type='classic', use_petsc=False,
 #--------------------------
 def setplot(plotdata):
 #--------------------------
-    """ 
+    """
     Specify what is to be plotted at each frame.
     Input:  plotdata, an instance of visclaw.data.ClawPlotData.
     Output: a modified version of plotdata.
-    """ 
+    """
     plotdata.clearfigures()  # clear any old figures,axes,items data
 
     # Plot variables
